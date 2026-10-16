@@ -91,12 +91,22 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
-  const saveToLocal = (newProfile: Profile, newLinks: LinkItem[]) => {
+  const saveToLocal = async (newProfile: Profile, newLinks: LinkItem[]) => {
     if (typeof window !== "undefined") {
       localStorage.setItem("orbit_profile", JSON.stringify(newProfile));
       localStorage.setItem("orbit_links", JSON.stringify(newLinks));
       setIsSavedNotice(true);
       setTimeout(() => setIsSavedNotice(false), 2000);
+    }
+
+    try {
+      await fetch("/api/admin/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile: newProfile, links: newLinks }),
+      });
+    } catch (apiErr) {
+      console.warn("API save notice:", apiErr);
     }
   };
 

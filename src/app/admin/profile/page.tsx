@@ -91,6 +91,16 @@ export default function ProfileEditPage() {
       setTimeout(() => setIsSavedNotice(false), 2500);
     }
 
+    try {
+      await fetch("/api/admin/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile: newProfile }),
+      });
+    } catch (apiErr) {
+      console.warn("API profile save notice:", apiErr);
+    }
+
     if (isConnectedToSupabase) {
       try {
         const supabase = createClient();

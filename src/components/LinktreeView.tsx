@@ -35,14 +35,44 @@ interface LinktreeViewProps {
 }
 
 export default function LinktreeView({
-  profile,
-  links,
+  profile: initialProfile,
+  links: initialLinks,
   isPreview = false,
   onLinkClick,
 }: LinktreeViewProps) {
-  const theme = getThemeById(profile.theme_id);
+  const [profile, setProfile] = useState<Profile>(initialProfile);
+  const [links, setLinks] = useState<LinkItem[]>(initialLinks);
   const [copied, setCopied] = useState(false);
 
+  // Sync with localStorage on client mount if available
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedProfile = localStorage.getItem("orbit_profile");
+      const savedLinks = localStorage.getItem("orbit_links");
+      if (savedProfile) {
+        try {
+          const parsed = JSON.parse(savedProfile);
+          if (parsed && typeof parsed === "object") {
+            setProfile((prev) => ({ ...prev, ...parsed }));
+          }
+        } catch (e) {
+          console.error("LinktreeView profile sync error:", e);
+        }
+      }
+      if (savedLinks) {
+        try {
+          const parsedLinks = JSON.parse(savedLinks);
+          if (Array.isArray(parsedLinks) && parsedLinks.length > 0) {
+            setLinks(parsedLinks);
+          }
+        } catch (e) {
+          console.error("LinktreeView links sync error:", e);
+        }
+      }
+    }
+  }, []);
+
+  const theme = getThemeById(profile.theme_id);
   const activeLinks = links.filter((l) => isPreview || l.is_active);
 
   const handleShare = () => {
