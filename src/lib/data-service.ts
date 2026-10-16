@@ -3,7 +3,7 @@ import { createClient } from "./supabase/client";
 
 // Demo fallback mock data for seamless preview when Supabase is not configured yet
 export const DEMO_PROFILE: Profile = {
-  id: "demo-user-id",
+  id: "00000000-0000-0000-0000-000000000001",
   username: "orbithub",
   display_name: "Orbit Hub",
   bio: "우주 모든 인연이 만날때까지\n인스타 최초 무료 소개팅 & Love Magazine 🪐",
@@ -20,8 +20,8 @@ export const DEMO_PROFILE: Profile = {
 
 export const DEMO_LINKS: LinkItem[] = [
   {
-    id: "link-1",
-    user_id: "demo-user-id",
+    id: "00000000-0000-0000-0000-000000000011",
+    user_id: "00000000-0000-0000-0000-000000000001",
     title: "🪐 인스타 최초 무료 소개팅 매칭 신청하기",
     url: "https://instagram.com/orbit.of.luv",
     icon: "sparkles",
@@ -32,8 +32,8 @@ export const DEMO_LINKS: LinkItem[] = [
     updated_at: new Date().toISOString(),
   },
   {
-    id: "link-2",
-    user_id: "demo-user-id",
+    id: "00000000-0000-0000-0000-000000000012",
+    user_id: "00000000-0000-0000-0000-000000000001",
     title: "📖 Orbit Love Magazine | 우주의 모든 연애 이야기",
     url: "https://instagram.com/orbit.of.luv",
     icon: "heart",
@@ -44,8 +44,8 @@ export const DEMO_LINKS: LinkItem[] = [
     updated_at: new Date().toISOString(),
   },
   {
-    id: "link-3",
-    user_id: "demo-user-id",
+    id: "00000000-0000-0000-0000-000000000013",
+    user_id: "00000000-0000-0000-0000-000000000001",
     title: "💌 익명 연애 고민 & 인연 사연 제보하기",
     url: "https://instagram.com/orbit.of.luv",
     icon: "mail",
@@ -56,8 +56,8 @@ export const DEMO_LINKS: LinkItem[] = [
     updated_at: new Date().toISOString(),
   },
   {
-    id: "link-4",
-    user_id: "demo-user-id",
+    id: "00000000-0000-0000-0000-000000000014",
+    user_id: "00000000-0000-0000-0000-000000000001",
     title: "✨ Orbit Hub 공식 인스타그램 (@orbit.of.luv)",
     url: "https://instagram.com/orbit.of.luv",
     icon: "instagram",
@@ -87,11 +87,12 @@ const localState = {
 };
 
 export async function fetchProfileByUsername(username: string): Promise<Profile | null> {
+  const normalizedUser = (username || "").toLowerCase();
+
   if (!isSupabaseConfigured()) {
-    if (username.toLowerCase() === localState.profile.username.toLowerCase()) {
+    if (normalizedUser === localState.profile.username.toLowerCase()) {
       return localState.profile;
     }
-    // Return sample profile with requested username
     return {
       ...localState.profile,
       username,
@@ -105,12 +106,23 @@ export async function fetchProfileByUsername(username: string): Promise<Profile 
       .from("profiles")
       .select("*")
       .ilike("username", username)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) return null;
-    return data as Profile;
+    if (data) {
+      return data as Profile;
+    }
+
+    // If row doesn't exist in Supabase yet, return default profile for orbithub
+    if (normalizedUser === "orbithub" || !normalizedUser) {
+      return localState.profile;
+    }
+
+    return null;
   } catch (err) {
     console.error("fetchProfileByUsername error:", err);
+    if (normalizedUser === "orbithub" || !normalizedUser) {
+      return localState.profile;
+    }
     return null;
   }
 }
@@ -128,8 +140,10 @@ export async function fetchUserLinks(userId: string): Promise<LinkItem[]> {
       .eq("user_id", userId)
       .order("order_index", { ascending: true });
 
-    if (error) throw error;
-    return (data as LinkItem[]) || [];
+    if (data && data.length > 0) {
+      return data as LinkItem[];
+    }
+    return localState.links;
   } catch (err) {
     console.error("fetchUserLinks error:", err);
     return localState.links;

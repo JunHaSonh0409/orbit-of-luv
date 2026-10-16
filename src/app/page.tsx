@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { fetchProfileByUsername, fetchUserLinks } from "@/lib/data-service";
+import { fetchProfileByUsername, fetchUserLinks, DEMO_PROFILE } from "@/lib/data-service";
 import LinktreeView from "@/components/LinktreeView";
 
 export const dynamic = "force-dynamic";
@@ -17,12 +17,8 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const profile = await fetchProfileByUsername("orbithub");
-  const links = await fetchUserLinks(profile?.id || "demo-user-id");
-
-  if (!profile) {
-    return null;
-  }
+  const profile = (await fetchProfileByUsername("orbithub")) || DEMO_PROFILE;
+  const links = await fetchUserLinks(profile.id);
 
   return (
     <main style={{ minHeight: "100vh", width: "100%" }}>

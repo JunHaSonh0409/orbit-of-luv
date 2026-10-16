@@ -33,24 +33,30 @@ export async function POST(request: NextRequest) {
       serverCachedLinks = updatedLinks;
     }
 
-    // If Supabase is connected, update DB
+    // If Supabase is connected, upsert into DB
     if (isSupabaseConfigured() && updatedProfile) {
       try {
         const supabase = createClient();
         await supabase
           .from("profiles")
-          .update({
-            display_name: updatedProfile.display_name,
-            username: updatedProfile.username,
-            bio: updatedProfile.bio,
-            avatar_url: updatedProfile.avatar_url,
-            theme_id: updatedProfile.theme_id,
-            social_links: updatedProfile.social_links,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", updatedProfile.id);
+          .upsert(
+            {
+              id:
+                updatedProfile.id && updatedProfile.id.includes("-")
+                  ? updatedProfile.id
+                  : "00000000-0000-0000-0000-000000000001",
+              username: updatedProfile.username || "orbithub",
+              display_name: updatedProfile.display_name || "Orbit Hub",
+              bio: updatedProfile.bio || "",
+              avatar_url: updatedProfile.avatar_url || "/orbit-hub-default-logo.png",
+              theme_id: updatedProfile.theme_id || "aurora-dark",
+              social_links: updatedProfile.social_links || {},
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "username" }
+          );
       } catch (dbErr) {
-        console.error("Supabase update error in API:", dbErr);
+        console.error("Supabase upsert error in API:", dbErr);
       }
     }
 
