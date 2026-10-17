@@ -1,4 +1,5 @@
 import { Profile, LinkItem } from "@/types/database.types";
+import { createClient } from "./supabase/client";
 
 // Demo fallback mock data for seamless preview when Supabase is not configured yet
 export const DEMO_PROFILE: Profile = {
@@ -69,7 +70,14 @@ export const DEMO_LINKS: LinkItem[] = [
 ];
 
 export function isSupabaseConfigured(): boolean {
-  return false;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return Boolean(
+    url &&
+    key &&
+    url !== "https://your-project.supabase.co" &&
+    !url.includes("placeholder")
+  );
 }
 
 // In-memory local state
@@ -79,10 +87,45 @@ const localState = {
 };
 
 export async function fetchProfileByUsername(username: string): Promise<Profile | null> {
+  const normalizedUser = (username || "").toLowerCase();
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .ilike("username", username || "orbithub")
+        .maybeSingle();
+
+      if (data) {
+        return data as Profile;
+      }
+    } catch (e) {
+      console.warn("fetchProfileByUsername Supabase warning:", e);
+    }
+  }
+
   return localState.profile;
 }
 
 export async function fetchUserLinks(userId: string): Promise<LinkItem[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("links")
+        .select("*")
+        .order("order_index", { ascending: true });
+
+      if (data && data.length > 0) {
+        return data as LinkItem[];
+      }
+    } catch (e) {
+      console.warn("fetchUserLinks Supabase warning:", e);
+    }
+  }
+
   return localState.links.sort((a, b) => a.order_index - b.order_index);
 }
 

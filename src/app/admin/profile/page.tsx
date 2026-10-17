@@ -6,6 +6,7 @@ import { Profile, LinkItem, SocialLinks } from "@/types/database.types";
 import { DEMO_PROFILE, DEMO_LINKS, isSupabaseConfigured } from "@/lib/data-service";
 import { THEMES } from "@/lib/themes";
 import LinktreeView from "@/components/LinktreeView";
+import { createClient } from "@/lib/supabase/client";
 import {
   IconYoutube,
   IconTwitter,
@@ -98,6 +99,30 @@ export default function ProfileEditPage() {
       });
     } catch (apiErr) {
       console.warn("API profile save notice:", apiErr);
+    }
+
+    if (isConnectedToSupabase) {
+      try {
+        const supabase = createClient();
+        await supabase.from("profiles").upsert(
+          {
+            id:
+              newProfile.id && newProfile.id.includes("-")
+                ? newProfile.id
+                : "00000000-0000-0000-0000-000000000001",
+            username: newProfile.username || "orbithub",
+            display_name: newProfile.display_name,
+            bio: newProfile.bio,
+            avatar_url: newProfile.avatar_url,
+            theme_id: newProfile.theme_id,
+            social_links: newProfile.social_links,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "username" }
+        );
+      } catch (err) {
+        console.warn("Supabase profile save notice:", err);
+      }
     }
   };
 

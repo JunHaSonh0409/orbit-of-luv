@@ -14,6 +14,7 @@ import {
 } from "@/lib/data-service";
 import { THEMES } from "@/lib/themes";
 import LinktreeView from "@/components/LinktreeView";
+import { createClient } from "@/lib/supabase/client";
 import {
   IconYoutube,
   IconTwitter,
@@ -108,13 +109,35 @@ export default function AdminDashboardPage() {
     } catch (apiErr) {
       console.warn("API save notice:", apiErr);
     }
+
+    if (isConnectedToSupabase) {
+      try {
+        const supabase = createClient();
+        for (const link of newLinks) {
+          await supabase.from("links").upsert({
+            id: link.id.includes("-") ? link.id : "00000000-0000-0000-0000-" + Date.now().toString(16).padStart(12, "0"),
+            user_id: newProfile.id || "00000000-0000-0000-0000-000000000001",
+            title: link.title,
+            url: link.url,
+            icon: link.icon || "globe",
+            is_active: link.is_active,
+            order_index: link.order_index,
+            click_count: link.click_count || 0,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        console.warn("Supabase links save notice:", err);
+      }
+    }
   };
 
   const handleAddLink = () => {
+    const randomHex = Math.random().toString(16).substring(2, 14).padEnd(12, "0");
     const newLink: LinkItem = {
-      id: `link-${Date.now()}`,
-      user_id: profile.id,
-      title: "New Link Title",
+      id: `00000000-0000-4000-a000-${randomHex}`,
+      user_id: profile.id || "00000000-0000-0000-0000-000000000001",
+      title: "새 링크 제목",
       url: "https://",
       icon: "globe",
       is_active: true,
