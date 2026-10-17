@@ -90,7 +90,38 @@ export default function AdminDashboardPage() {
         console.error(e);
       }
     }
-  }, []);
+
+    // Also fetch live data from Supabase if connected
+    if (isConnectedToSupabase) {
+      (async () => {
+        try {
+          const supabase = createClient();
+          const { data: linksData } = await supabase
+            .from("links")
+            .select("*")
+            .order("order_index", { ascending: true });
+
+          if (linksData && linksData.length > 0) {
+            setLinks(linksData as LinkItem[]);
+            localStorage.setItem("orbit_links", JSON.stringify(linksData));
+          }
+
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("*")
+            .ilike("username", "orbithub")
+            .maybeSingle();
+
+          if (profileData) {
+            setProfile(profileData as Profile);
+            localStorage.setItem("orbit_profile", JSON.stringify(profileData));
+          }
+        } catch (e) {
+          console.warn("Live data fetch notice:", e);
+        }
+      })();
+    }
+  }, [isConnectedToSupabase]);
 
   const saveToLocal = async (newProfile: Profile, newLinks: LinkItem[]) => {
     if (typeof window !== "undefined") {
@@ -160,10 +191,18 @@ export default function AdminDashboardPage() {
     saveToLocal(profile, updated);
   };
 
-  const handleDeleteLink = (id: string) => {
+  const handleDeleteLink = async (id: string) => {
     const updated = links.filter((l) => l.id !== id);
     setLinks(updated);
     saveToLocal(profile, updated);
+    if (isConnectedToSupabase) {
+      try {
+        const supabase = createClient();
+        await supabase.from("links").delete().eq("id", id);
+      } catch (err) {
+        console.warn("Delete link error:", err);
+      }
+    }
   };
 
   const handleMoveLink = (index: number, direction: "up" | "down") => {

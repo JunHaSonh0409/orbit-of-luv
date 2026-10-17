@@ -81,7 +81,28 @@ export default function ProfileEditPage() {
         console.error(e);
       }
     }
-  }, []);
+
+    // Also fetch live data from Supabase if connected
+    if (isConnectedToSupabase) {
+      (async () => {
+        try {
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("profiles")
+            .select("*")
+            .ilike("username", "orbithub")
+            .maybeSingle();
+
+          if (data) {
+            setProfile(data as Profile);
+            localStorage.setItem("orbit_profile", JSON.stringify(data));
+          }
+        } catch (e) {
+          console.warn("Live profile fetch notice:", e);
+        }
+      })();
+    }
+  }, [isConnectedToSupabase]);
 
   const saveProfileData = async (newProfile: Profile) => {
     setProfile(newProfile);
