@@ -1,5 +1,4 @@
 import { Profile, LinkItem } from "@/types/database.types";
-import { createClient } from "./supabase/client";
 
 // Demo fallback mock data for seamless preview when Supabase is not configured yet
 export const DEMO_PROFILE: Profile = {
@@ -70,103 +69,36 @@ export const DEMO_LINKS: LinkItem[] = [
 ];
 
 export function isSupabaseConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return Boolean(
-    url &&
-    key &&
-    url !== "https://your-project.supabase.co" &&
-    !url.includes("placeholder")
-  );
+  return false;
 }
 
-// In-memory or local store fallback for demo editing
+// In-memory local state
 const localState = {
   profile: { ...DEMO_PROFILE },
   links: [...DEMO_LINKS],
 };
 
 export async function fetchProfileByUsername(username: string): Promise<Profile | null> {
-  const normalizedUser = (username || "").toLowerCase();
-
-  if (!isSupabaseConfigured()) {
-    if (normalizedUser === localState.profile.username.toLowerCase()) {
-      return localState.profile;
-    }
-    return {
-      ...localState.profile,
-      username,
-      display_name: `@${username}`,
-    };
-  }
-
-  try {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .ilike("username", username)
-      .maybeSingle();
-
-    if (data) {
-      return data as Profile;
-    }
-
-    // If row doesn't exist in Supabase yet, return default profile for orbithub
-    if (normalizedUser === "orbithub" || !normalizedUser) {
-      return localState.profile;
-    }
-
-    return null;
-  } catch (err) {
-    console.error("fetchProfileByUsername error:", err);
-    if (normalizedUser === "orbithub" || !normalizedUser) {
-      return localState.profile;
-    }
-    return null;
-  }
+  return localState.profile;
 }
 
 export async function fetchUserLinks(userId: string): Promise<LinkItem[]> {
-  if (!isSupabaseConfigured()) {
-    return localState.links.sort((a, b) => a.order_index - b.order_index);
-  }
+  return localState.links.sort((a, b) => a.order_index - b.order_index);
+}
 
-  try {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("links")
-      .select("*")
-      .eq("user_id", userId)
-      .order("order_index", { ascending: true });
+export async function updateLocalProfile(updated: Partial<Profile>): Promise<Profile> {
+  localState.profile = { ...localState.profile, ...updated };
+  return localState.profile;
+}
 
-    if (data && data.length > 0) {
-      return data as LinkItem[];
-    }
-    return localState.links;
-  } catch (err) {
-    console.error("fetchUserLinks error:", err);
-    return localState.links;
-  }
+export async function updateLocalLinks(updated: LinkItem[]): Promise<LinkItem[]> {
+  localState.links = updated;
+  return localState.links;
 }
 
 export async function recordClick(linkId: string, referrer = ""): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    const link = localState.links.find((l) => l.id === linkId);
-    if (link) link.click_count += 1;
-    return;
-  }
-
-  try {
-    const supabase = createClient();
-    await supabase.rpc("track_link_click", {
-      p_link_id: linkId,
-      p_referrer: referrer,
-      p_user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "",
-    });
-  } catch (err) {
-    console.error("recordClick error:", err);
-  }
+  const link = localState.links.find((l) => l.id === linkId);
+  if (link) link.click_count += 1;
 }
 
 // -----------------------------------------------------------------------------

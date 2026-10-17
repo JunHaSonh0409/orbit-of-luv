@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
 import { ADMIN_COOKIE_NAME } from "@/lib/auth-guard";
 
 export async function proxy(request: NextRequest) {
@@ -21,7 +20,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return await updateSession(request);
+  return NextResponse.next();
 }
 
 // Keep export for middleware backwards compatibility

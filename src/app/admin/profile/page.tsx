@@ -6,7 +6,6 @@ import { Profile, LinkItem, SocialLinks } from "@/types/database.types";
 import { DEMO_PROFILE, DEMO_LINKS, isSupabaseConfigured } from "@/lib/data-service";
 import { THEMES } from "@/lib/themes";
 import LinktreeView from "@/components/LinktreeView";
-import { createClient } from "@/lib/supabase/client";
 import {
   IconYoutube,
   IconTwitter,
@@ -99,26 +98,6 @@ export default function ProfileEditPage() {
       });
     } catch (apiErr) {
       console.warn("API profile save notice:", apiErr);
-    }
-
-    if (isConnectedToSupabase) {
-      try {
-        const supabase = createClient();
-        await supabase
-          .from("profiles")
-          .update({
-            display_name: newProfile.display_name,
-            username: newProfile.username,
-            bio: newProfile.bio,
-            avatar_url: newProfile.avatar_url,
-            theme_id: newProfile.theme_id,
-            social_links: newProfile.social_links,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", newProfile.id);
-      } catch (err) {
-        console.error("Supabase profile save error:", err);
-      }
     }
   };
 
