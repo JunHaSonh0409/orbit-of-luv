@@ -34,6 +34,21 @@ interface LinktreeViewProps {
   onLinkClick?: (linkId: string, url: string) => void;
 }
 
+export function formatTargetUrl(rawUrl: string): string {
+  if (!rawUrl) return "#";
+  const trimmed = rawUrl.trim();
+  if (
+    trimmed.startsWith("http://") ||
+    trimmed.startsWith("https://") ||
+    trimmed.startsWith("mailto:") ||
+    trimmed.startsWith("tel:") ||
+    trimmed.startsWith("#")
+  ) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+}
+
 export default function LinktreeView({
   profile: initialProfile,
   links: initialLinks,
@@ -378,12 +393,12 @@ export default function LinktreeView({
           activeLinks.map((link) => (
             <a
               key={link.id}
-              href={isPreview ? "#" : link.url}
+              href={isPreview ? "#" : formatTargetUrl(link.url)}
               target={isPreview ? "_self" : "_blank"}
               rel="noreferrer"
               onClick={(e) => {
                 if (isPreview) e.preventDefault();
-                if (onLinkClick) onLinkClick(link.id, link.url);
+                if (onLinkClick) onLinkClick(link.id, formatTargetUrl(link.url));
               }}
               style={{
                 display: "flex",

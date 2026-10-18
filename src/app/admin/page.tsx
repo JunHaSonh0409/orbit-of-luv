@@ -124,9 +124,25 @@ export default function AdminDashboardPage() {
   }, [isConnectedToSupabase]);
 
   const saveToLocal = async (newProfile: Profile, newLinks: LinkItem[]) => {
+    // Sanitize URLs to ensure proper protocol (https://) and trim whitespace
+    const sanitizedLinks = newLinks.map((l) => {
+      let cleanUrl = (l.url || "").trim();
+      if (
+        cleanUrl &&
+        !cleanUrl.startsWith("http://") &&
+        !cleanUrl.startsWith("https://") &&
+        !cleanUrl.startsWith("mailto:") &&
+        !cleanUrl.startsWith("tel:") &&
+        !cleanUrl.startsWith("#")
+      ) {
+        cleanUrl = `https://${cleanUrl}`;
+      }
+      return { ...l, url: cleanUrl };
+    });
+
     if (typeof window !== "undefined") {
       localStorage.setItem("orbit_profile", JSON.stringify(newProfile));
-      localStorage.setItem("orbit_links", JSON.stringify(newLinks));
+      localStorage.setItem("orbit_links", JSON.stringify(sanitizedLinks));
       setIsSavedNotice(true);
       setTimeout(() => setIsSavedNotice(false), 2000);
     }
@@ -135,7 +151,7 @@ export default function AdminDashboardPage() {
       await fetch("/api/admin/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile: newProfile, links: newLinks }),
+        body: JSON.stringify({ profile: newProfile, links: sanitizedLinks }),
       });
     } catch (apiErr) {
       console.warn("API save notice:", apiErr);
@@ -144,7 +160,7 @@ export default function AdminDashboardPage() {
     if (isConnectedToSupabase) {
       try {
         const supabase = createClient();
-        for (const link of newLinks) {
+        for (const link of sanitizedLinks) {
           await supabase.from("links").upsert({
             id: link.id.includes("-") ? link.id : "00000000-0000-0000-0000-" + Date.now().toString(16).padStart(12, "0"),
             user_id: newProfile.id || "00000000-0000-0000-0000-000000000001",
