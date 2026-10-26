@@ -32,6 +32,8 @@ Linktree Orbit은 **Next.js (App Router)**, **Supabase (인증 & PostgreSQL & RL
    - `NEXT_PUBLIC_SUPABASE_URL` : 위에서 복사한 Supabase Project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` : 위에서 복사한 Supabase anon key
    - `NEXT_PUBLIC_APP_URL` : 생성될 Vercel 도메인 (예: `https://my-linktree.vercel.app`)
+   - `ADMIN_PASSCODE` : `/admin` 진입용 마스터 패스코드 (**필수** — 기본값이 없어 설정 전에는 관리자 로그인이 비활성화됩니다)
+   - `ADMIN_SESSION_SECRET` : (선택) 관리자 세션 쿠키 서명 키. 없으면 `ADMIN_PASSCODE`로 서명합니다
 4. **Deploy** 버튼을 누르면 즉시 빌드 및 글로벌 배포가 완료됩니다!
 
 ---

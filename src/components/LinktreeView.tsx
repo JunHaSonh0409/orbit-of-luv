@@ -49,6 +49,17 @@ export function formatTargetUrl(rawUrl: string): string {
   return `https://${trimmed}`;
 }
 
+// Fire-and-forget analytics ping that survives the page navigating away
+function sendAnalyticsBeacon(path: string, payload: Record<string, string>) {
+  try {
+    const body = JSON.stringify(payload);
+    if (navigator.sendBeacon?.(path, body)) return;
+    fetch(path, { method: "POST", body, keepalive: true }).catch(() => {});
+  } catch {
+    // Analytics must never break the page
+  }
+}
+
 export default function LinktreeView({
   profile: initialProfile,
   links: initialLinks,
@@ -58,6 +69,17 @@ export default function LinktreeView({
   const [profile, setProfile] = useState<Profile>(initialProfile);
   const [links, setLinks] = useState<LinkItem[]>(initialLinks);
   const [copied, setCopied] = useState(false);
+  const pageviewSentRef = React.useRef(false);
+
+  // Record one pageview per mount on public pages (guard against StrictMode double effects)
+  React.useEffect(() => {
+    if (isPreview || pageviewSentRef.current) return;
+    pageviewSentRef.current = true;
+    sendAnalyticsBeacon("/api/pageview", {
+      profileId: initialProfile.id,
+      referrer: document.referrer,
+    });
+  }, [isPreview, initialProfile.id]);
 
   // Sync with localStorage on client mount if available
   React.useEffect(() => {
@@ -398,7 +420,13 @@ export default function LinktreeView({
               rel="noreferrer"
               onClick={(e) => {
                 if (isPreview) e.preventDefault();
-                if (onLinkClick) onLinkClick(link.id, formatTargetUrl(link.url));
+                if (onLinkClick) {
+                  onLinkClick(link.id, formatTargetUrl(link.url));
+                } else if (!isPreview) {
+                  sendAnalyticsBeacon(`/api/click/${link.id}`, {
+                    referrer: document.referrer,
+                  });
+                }
               }}
               style={{
                 display: "flex",
