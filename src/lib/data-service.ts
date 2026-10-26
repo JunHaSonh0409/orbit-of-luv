@@ -142,9 +142,43 @@ export async function updateLocalLinks(updated: LinkItem[]): Promise<LinkItem[]>
   return localState.links;
 }
 
-export async function recordClick(linkId: string, referrer = ""): Promise<void> {
+export async function recordClick(linkId: string, referrer = "", userAgent = ""): Promise<void> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      // Atomically increments links.click_count and logs to analytics_clicks
+      const { error } = await supabase.rpc("track_link_click", {
+        p_link_id: linkId,
+        p_referrer: referrer,
+        p_user_agent: userAgent,
+      });
+
+      if (!error) return;
+      console.warn("recordClick Supabase warning:", error);
+    } catch (e) {
+      console.warn("recordClick Supabase warning:", e);
+    }
+  }
+
   const link = localState.links.find((l) => l.id === linkId);
   if (link) link.click_count += 1;
+}
+
+export async function recordPageview(profileId: string, referrer = "", userAgent = ""): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from("analytics_pageviews").insert({
+      profile_id: profileId,
+      referrer,
+      user_agent: userAgent,
+    });
+
+    if (error) console.warn("recordPageview Supabase warning:", error);
+  } catch (e) {
+    console.warn("recordPageview Supabase warning:", e);
+  }
 }
 
 // -----------------------------------------------------------------------------
