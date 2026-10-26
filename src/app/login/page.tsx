@@ -159,9 +159,6 @@ function LoginForm() {
                 style={{ position: "absolute", left: 14, top: 13 }}
               />
             </div>
-            <span style={{ fontSize: 11, color: "#64748b", marginTop: 6, display: "block" }}>
-              기본 패스코드: <code style={{ color: "#a5b4fc" }}>orbit2026!</code> (.env.local에서 변경 가능)
-            </span>
           </div>
 
           <button

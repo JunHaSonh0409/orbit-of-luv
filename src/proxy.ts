@@ -1,14 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ADMIN_COOKIE_NAME } from "@/lib/auth-guard";
+import { ADMIN_COOKIE_NAME, verifyAdminSessionToken } from "@/lib/auth-guard";
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // 1. Strict Barrier: Protect all /admin routes from any unauthorized visitor
   if (pathname.startsWith("/admin")) {
-    const adminSession = request.cookies.get(ADMIN_COOKIE_NAME);
-    const isAuthenticated = Boolean(
-      adminSession?.value && adminSession.value.startsWith("admin_auth_")
+    const isAuthenticated = verifyAdminSessionToken(
+      request.cookies.get(ADMIN_COOKIE_NAME)?.value
     );
 
     if (!isAuthenticated) {

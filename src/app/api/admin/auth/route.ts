@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_COOKIE_NAME, verifyAdminPasscode } from "@/lib/auth-guard";
+import {
+  ADMIN_COOKIE_NAME,
+  ADMIN_SESSION_MAX_AGE,
+  createAdminSessionToken,
+  verifyAdminPasscode,
+  verifyAdminSessionToken,
+} from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +20,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate authenticated session token
-    const token = `admin_auth_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+    // Generate HMAC-signed session token
+    const token = createAdminSessionToken();
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "서버에 관리자 인증 설정이 되어 있지 않습니다." },
+        { status: 500 }
+      );
+    }
 
     const response = NextResponse.json({
       success: true,
@@ -30,7 +42,7 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: ADMIN_SESSION_MAX_AGE,
     });
 
     return response;
@@ -61,7 +73,6 @@ export async function DELETE() {
 }
 
 export async function GET(request: NextRequest) {
-  const sessionCookie = request.cookies.get(ADMIN_COOKIE_NAME);
-  const isValid = Boolean(sessionCookie?.value && sessionCookie.value.startsWith("admin_auth_"));
+  const isValid = verifyAdminSessionToken(request.cookies.get(ADMIN_COOKIE_NAME)?.value);
   return NextResponse.json({ isAuthenticated: isValid });
 }
